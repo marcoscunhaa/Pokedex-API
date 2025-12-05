@@ -1,0 +1,201 @@
+{
+	"info": {
+		"_postman_id": "57c87891-8b5d-4918-b251-3936451cbdd1",
+		"name": "PokédexAPI",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "32520482"
+	},
+	"item": [
+		{
+			"name": "Mostrar todos os Pokémons",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/pokemons",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"pokemons"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Mostrar todos os Pokémons p/ page",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/pokemons/paginated",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"pokemons",
+						"paginated"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Buscar pokémon p/ id",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/pokemons/979",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"pokemons",
+						"979"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Buscar pokémon p/ nome",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/pokemons/name?name=Dialga",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"pokemons",
+						"name"
+					],
+					"query": [
+						{
+							"key": "name",
+							"value": "Dialga"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Buscar pokémon p/ tipo",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/pokemons/type?type=ghost",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"pokemons",
+						"type"
+					],
+					"query": [
+						{
+							"key": "type",
+							"value": "ghost"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Buscar pokémon p/ habilidade",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/pokemons/ability?ability=levitate",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"pokemons",
+						"ability"
+					],
+					"query": [
+						{
+							"key": "ability",
+							"value": "levitate"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Buscar pokémon p/ movimento",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/pokemons/move?move=shadow-ball",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"pokemons",
+						"move"
+					],
+					"query": [
+						{
+							"key": "move",
+							"value": "shadow-ball"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Importando Todos os Pokémons",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/api/pokemons/import",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"pokemons",
+						"import"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

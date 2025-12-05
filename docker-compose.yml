@@ -1,0 +1,19 @@
+version: "3.8"
+
+services:
+  mysql-db:
+    image: mysql:8.0
+    container_name: pokedex-api
+    ports:
+      - "3308:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: super@admin
+      MYSQL_DATABASE: localhost
+      MYSQL_USER: dev
+      MYSQL_PASSWORD: admin
+    volumes:
+      - mysql-data:/var/lib/mysql
+    restart: unless-stopped
+
+volumes:
+  mysql-data:
