@@ -16,7 +16,7 @@ public class StartupRunner implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        int totalPokemons = 1302; // ou pegue dinamicamente se quiser
+        int totalPokemons = 1025; // ou pegue dinamicamente se quiser
         for (int i = 1; i <= totalPokemons; i++) {
             try {
                 Pokemon p = pokemonService.fetchAndSavePokemon(String.valueOf(i));
