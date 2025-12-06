@@ -23,7 +23,6 @@ public class PokemonService {
 
     private static final String UNKNOWN = "unknown";
     private static final String DESCRIPTION_NOT_FOUND = "Descrição não encontrada.";
-    private static final int MAX_ID = 1026;
 
     @Autowired
     private PokemonRepository repository;
@@ -31,154 +30,90 @@ public class PokemonService {
     @Autowired
     private RestTemplate restTemplate;
 
-    // ===============================
-    //        FETCH E SALVAMENTO
-    // ===============================
     public Pokemon fetchAndSavePokemon(String pokemonIdentifier) {
-        return fetchAndSavePokemon(pokemonIdentifier, new HashSet<>(), null);
-    }
+        String url = baseApiUrl + "pokemon/" + pokemonIdentifier.toLowerCase();
 
-    private Pokemon fetchAndSavePokemon(String pokemonIdentifier, Set<String> processing, Pokemon normalPokemon) {
-        pokemonIdentifier = pokemonIdentifier.toLowerCase();
-
-        if (processing.contains(pokemonIdentifier)) {
-            return repository.findByName(pokemonIdentifier).orElse(null);
-        }
-
-        processing.add(pokemonIdentifier);
-
-        System.out.println("➡ Buscando Pokémon: " + pokemonIdentifier);
-
-        String url = baseApiUrl + "pokemon/" + pokemonIdentifier;
         Map<String, Object> response = fetchFromApi(url);
-
         if (response == null) {
-            System.err.println("❌ Falha ao buscar: " + pokemonIdentifier);
+            System.err.println("Falha ao buscar dados do Pokémon: " + pokemonIdentifier);
             return null;
         }
 
-        String name = (String) response.get("name");
-
-        Optional<Pokemon> existing = repository.findByName(name);
-        if (existing.isPresent()) {
-            System.out.println("✔ Já existe no banco: " + name);
-            return existing.get();
+        String name = Optional.ofNullable((String) response.get("name")).orElse(null);
+        if (name == null) {
+            System.err.println("Nome do Pokémon não encontrado.");
+            return null;
         }
 
+        Optional<Pokemon> existingPokemon = repository.findByName(name);
+        if (existingPokemon.isPresent()) {
+            System.out.println("Pokémon '" + name + "' já existe no banco. Retornando existente.");
+            return existingPokemon.get();
+        }
+
+        // Criação do novo Pokémon
         Pokemon pokemon = new Pokemon();
         pokemon.setName(name);
         pokemon.setHeight((int) response.get("height"));
         pokemon.setWeight((int) response.get("weight"));
 
-        pokemon.setSprite("https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/" + name + ".png");
+        Integer id = (Integer) response.get("id");
+        pokemon.setSprite("https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/" + id + ".png");
 
         pokemon.setType(parseNameList((List<Map<String, Object>>) response.get("types"), "type"));
         pokemon.setAbility(parseNameList((List<Map<String, Object>>) response.get("abilities"), "ability"));
         pokemon.setMove(parseNameList((List<Map<String, Object>>) response.get("moves"), "move"));
         pokemon.setStats(parseStats((List<Map<String, Object>>) response.get("stats")));
 
-        // ============================
-        //      SPECIES INFO
-        // ============================
+        // Informação de espécie
         Map<String, Object> speciesInfo = (Map<String, Object>) response.get("species");
-        String speciesUrl = speciesInfo != null ? (String) speciesInfo.get("url") : null;
+        String speciesUrl = Optional.ofNullable(speciesInfo).map(s -> (String) s.get("url")).orElse(null);
 
         if (speciesUrl != null) {
             Map<String, Object> speciesData = fetchFromApi(speciesUrl);
-
             if (speciesData != null) {
                 Map<String, Object> generationInfo = (Map<String, Object>) speciesData.get("generation");
                 if (generationInfo != null) {
                     pokemon.setGeneration((String) generationInfo.get("name"));
                 }
-
                 pokemon.setEvolution(parseEvolution(speciesData, pokemonIdentifier));
-
-                // Descrição: se nula, usa do normal
-                String description = parseFlavorText(speciesData);
-                if ((description == null || description.isEmpty() || description.equals(DESCRIPTION_NOT_FOUND)) && normalPokemon != null) {
-                    description = normalPokemon.getDescription();
-                }
-                pokemon.setDescription(description != null ? description : DESCRIPTION_NOT_FOUND);
-
+                pokemon.setDescription(parseFlavorText(speciesData));
             } else {
-                handleSpeciesFallback(pokemon, normalPokemon);
+                handleSpeciesFallback(pokemon);
             }
         } else {
-            handleSpeciesFallback(pokemon, normalPokemon);
+            handleSpeciesFallback(pokemon);
         }
 
-        System.out.println("💾 Salvando no banco: " + name);
-        Pokemon saved = repository.save(pokemon);
-
-        return saved;
+        System.out.println("Salvando novo Pokémon: " + name);
+        return repository.save(pokemon);
     }
 
-    private void handleSpeciesFallback(Pokemon pokemon, Pokemon normalPokemon) {
-        pokemon.setEvolution(List.of(UNKNOWN));
-        if (normalPokemon != null && normalPokemon.getDescription() != null) {
-            pokemon.setDescription(normalPokemon.getDescription());
-        } else {
-            pokemon.setDescription(DESCRIPTION_NOT_FOUND);
-        }
-    }
+
 
     public void fetchAndSaveAllPokemons() {
         String url = baseApiUrl + "pokemon?limit=100000&offset=0";
         Map<String, Object> response = fetchFromApi(url);
         if (response == null || !response.containsKey("results")) {
-            System.err.println("❌ Resposta inválida da API.");
+            System.err.println("Resposta inválida da API.");
             return;
         }
 
         List<Map<String, String>> results = (List<Map<String, String>>) response.get("results");
-
-        for (Map<String, String> pokeData : results) {
-            String name = pokeData.get("name");
-
-            // Busca o Pokémon normal
-            Pokemon normal = fetchAndSavePokemon(name);
-            if (normal == null) continue;
-
-            // Verifica se o ID ultrapassa o limite
-            if (normal.getId() != null && normal.getId() > MAX_ID) {
-                System.out.println("⚠ ID máximo atingido (" + normal.getId() + "). Parando a busca.");
-                break;
-            }
-
-            // =========================
-            // Salva formas alternativas
-            // =========================
+        int count = 1;
+        for (Map<String, String> pokemonData : results) {
+            String name = pokemonData.get("name");
             try {
-                Map<String, Object> speciesData = fetchFromApi(baseApiUrl + "pokemon-species/" + normal.getName());
-                if (speciesData == null) continue;
-
-                List<Map<String, Object>> varieties = (List<Map<String, Object>>) speciesData.get("varieties");
-                if (varieties == null) continue;
-
-                for (Map<String, Object> variety : varieties) {
-                    Map<String, Object> pokeInfo = (Map<String, Object>) variety.get("pokemon");
-                    if (pokeInfo == null) continue;
-
-                    String varietyName = ((String) pokeInfo.get("name")).toLowerCase();
-                    boolean isDefault = (boolean) variety.getOrDefault("is_default", false);
-
-                    if (!isDefault && repository.findByName(varietyName).isEmpty()) {
-                        System.out.println("🔁 Salvando forma alternativa: " + varietyName);
-                        fetchAndSavePokemon(varietyName, new HashSet<>(), normal); // herda descrição
-                    }
-                }
+                System.out.printf("(%d/%d) Salvando: %s...%n", count++, results.size(), name);
+                fetchAndSavePokemon(name);
             } catch (Exception e) {
-                System.err.println("Erro ao processar alternativas de " + normal.getName() + ": " + e.getMessage());
+                System.err.printf("Erro ao salvar Pokémon '%s': %s%n", name, e.getMessage());
             }
         }
 
-        System.out.println("✅ Todos os Pokémon e formas alternativas até o ID " + MAX_ID + " foram processados.");
+        System.out.println("Importação de todos os pokémons concluída.");
     }
 
-    // ===============================
-    // MÉTODOS DE BUSCA, ADVANCED SEARCH, SPRITES
-    // ===============================
     public List<Pokemon> getAllPokemons() {
         return repository.findAllByOrderByIdAsc();
     }
@@ -207,82 +142,6 @@ public class PokemonService {
         return repository.findByMoveContainingIgnoreCaseOrderByIdAsc(move);
     }
 
-    public List<Pokemon> advancedSearch(String name, List<String> types, String ability, String move, String generation) {
-        List<Pokemon> result = getAllPokemons();
-
-        if (name != null && !name.isEmpty()) {
-            result = result.stream()
-                    .filter(p -> p.getName().toLowerCase().contains(name.toLowerCase()))
-                    .collect(Collectors.toList());
-        }
-
-        if (types != null && !types.isEmpty()) {
-            result = result.stream()
-                    .filter(p -> types.stream().allMatch(t ->
-                            p.getType().stream().anyMatch(pt -> pt.equalsIgnoreCase(t))
-                    ))
-                    .collect(Collectors.toList());
-        }
-
-        if (ability != null && !ability.isEmpty()) {
-            result = result.stream()
-                    .filter(p -> p.getAbility().stream().anyMatch(a -> a.equalsIgnoreCase(ability)))
-                    .collect(Collectors.toList());
-        }
-
-        if (move != null && !move.isEmpty()) {
-            result = result.stream()
-                    .filter(p -> p.getMove().stream().anyMatch(m -> m.equalsIgnoreCase(move)))
-                    .collect(Collectors.toList());
-        }
-
-        if (generation != null && !generation.isEmpty()) {
-            result = result.stream()
-                    .filter(p -> p.getGeneration() != null && p.getGeneration().equalsIgnoreCase(generation))
-                    .collect(Collectors.toList());
-        }
-
-        return result;
-    }
-
-    public void convertAllSpritesToBase64() {
-        List<Pokemon> pokemons = repository.findAllByOrderByIdAsc();
-
-        for (Pokemon pokemon : pokemons) {
-            if (pokemon.getId() != null && pokemon.getId() > MAX_ID) {
-                continue; // ignora Pokémon acima do limite
-            }
-
-            try {
-                if (pokemon.getSpriteBase64() == null || pokemon.getSpriteBase64().isEmpty()) {
-                    String base64 = downloadImageAsBase64(pokemon.getSprite());
-                    pokemon.setSpriteBase64(base64);
-                    System.out.println("Convertido: " + pokemon.getName());
-                    Thread.sleep(1000);
-                } else {
-                    System.out.println("Já convertido: " + pokemon.getName());
-                }
-            } catch (Exception e) {
-                System.err.println("Erro ao converter sprite do Pokémon '" + pokemon.getName() + "': " + e.getMessage());
-            }
-        }
-
-        repository.saveAll(pokemons);
-    }
-
-    private String downloadImageAsBase64(String imageUrl) {
-        try (InputStream in = new URL(imageUrl).openStream()) {
-            byte[] imageBytes = in.readAllBytes();
-            return Base64.getEncoder().encodeToString(imageBytes);
-        } catch (Exception e) {
-            System.err.println("Erro ao baixar/converter imagem: " + e.getMessage());
-            return "";
-        }
-    }
-
-    // ===============================
-    //        MÉTODOS PRIVADOS
-    // ===============================
     private Map<String, Object> fetchFromApi(String url) {
         try {
             return restTemplate.getForObject(url, Map.class);
@@ -313,6 +172,11 @@ public class PokemonService {
             }
         });
         return statMap;
+    }
+
+    private void handleSpeciesFallback(Pokemon pokemon) {
+        pokemon.setEvolution(List.of(UNKNOWN));
+        pokemon.setDescription(DESCRIPTION_NOT_FOUND);
     }
 
     private List<String> parseEvolution(Map<String, Object> speciesData, String pokemonName) {
@@ -352,5 +216,82 @@ public class PokemonService {
             }
         }
         return DESCRIPTION_NOT_FOUND;
+    }
+
+    public void convertAllSpritesToBase64() {
+        List<Pokemon> pokemons = repository.findAll();
+
+        for (Pokemon pokemon : pokemons) {
+            try {
+                if (pokemon.getSpriteBase64() == null || pokemon.getSpriteBase64().isEmpty()) {
+                    String base64 = downloadImageAsBase64(pokemon.getSprite());
+                    pokemon.setSpriteBase64(base64);
+                    System.out.println("Convertido: " + pokemon.getName());
+
+                    // Delay entre as requisições para evitar erro 429
+                    Thread.sleep(1000);
+                } else {
+                    System.out.println("Já convertido: " + pokemon.getName());
+                }
+            } catch (Exception e) {
+                System.err.println("Erro ao converter sprite do Pokémon '" + pokemon.getName() + "': " + e.getMessage());
+            }
+        }
+
+        repository.saveAll(pokemons);
+    }
+
+
+
+    private String downloadImageAsBase64(String imageUrl) {
+        try (InputStream in = new URL(imageUrl).openStream()) {
+            byte[] imageBytes = in.readAllBytes();
+            return Base64.getEncoder().encodeToString(imageBytes);
+        } catch (Exception e) {
+            System.err.println("Erro ao baixar/converter imagem: " + e.getMessage());
+            return "";
+        }
+    }
+
+    public List<Pokemon> advancedSearch(String name, List<String> types, String ability, String move, String generation) {
+        // Obtém todos os pokémons
+        List<Pokemon> result = getAllPokemons();
+
+        // Filtra por nome (se fornecido)
+        if (name != null && !name.isEmpty()) {
+            result = result.stream()
+                    .filter(p -> p.getName().toLowerCase().contains(name.toLowerCase()))
+                    .collect(Collectors.toList());
+        }
+
+        // Filtra por tipo (se fornecido)
+        if (types != null && !types.isEmpty()) {
+            result = result.stream()
+                    .filter(p -> types.stream().allMatch(t -> p.getType().contains(t.toLowerCase())))
+                    .collect(Collectors.toList());
+        }
+
+        // Filtra por habilidade (se fornecido)
+        if (ability != null && !ability.isEmpty()) {
+            result = result.stream()
+                    .filter(p -> p.getAbility().contains(ability.toLowerCase()))
+                    .collect(Collectors.toList());
+        }
+
+        // Filtra por movimento (se fornecido)
+        if (move != null && !move.isEmpty()) {
+            result = result.stream()
+                    .filter(p -> p.getMove().contains(move.toLowerCase()))
+                    .collect(Collectors.toList());
+        }
+
+        // Filtra por geração (se fornecido)
+        if (generation != null && !generation.isEmpty()) {
+            result = result.stream()
+                    .filter(p -> p.getGeneration() != null && p.getGeneration().toLowerCase().contains(generation.toLowerCase()))
+                    .collect(Collectors.toList());
+        }
+
+        return result;
     }
 }
