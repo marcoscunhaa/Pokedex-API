@@ -30,7 +30,7 @@ public class PokemonService {
     @Autowired
     private RestTemplate restTemplate;
 
-    // ===================== BAR PROGRESS =====================
+    // ===================== PROGRESS BAR =====================
     private void printProgressBar(int current, int total, String name, String status) {
         int barSize = 40;
         double progress = (double) current / total;
@@ -39,7 +39,6 @@ public class PokemonService {
         int empty = barSize - filled;
 
         String bar = "[" + "#".repeat(filled) + "-".repeat(empty) + "]";
-
         int percent = (int) (progress * 100);
 
         System.out.printf("\r%s %3d%% (%4d/%4d) - %-15s [%s]",
@@ -52,25 +51,33 @@ public class PokemonService {
         }
     }
 
-    // ===================== FETCH E SALVAMENTO =====================
+    // ===================== FETCH + SAVE =====================
     public Pokemon fetchAndSavePokemon(String pokemonIdentifier) {
         String url = baseApiUrl + "pokemon/" + pokemonIdentifier.toLowerCase();
         Map<String, Object> response = fetchFromApi(url);
 
         if (response == null) return null;
 
-        String name = Optional.ofNullable((String) response.get("name")).orElse(null);
-        if (name == null) return null;
+        Integer id = (Integer) response.get("id");
+        String name = Optional.ofNullable((String) response.get("name"))
+                .map(String::toLowerCase).orElse(null);
 
-        Optional<Pokemon> existingPokemon = repository.findByName(name);
-        if (existingPokemon.isPresent()) return existingPokemon.get();
+        if (id == null || name == null) return null;
+
+        // ---------- 🔥 ANTI-DUPLICIDADE ABSOLUTA ----------
+        Optional<Pokemon> existingById = repository.findById(Long.valueOf(id));
+        if (existingById.isPresent()) return existingById.get();
+
+        Optional<Pokemon> existingByName = repository.findByName(name);
+        if (existingByName.isPresent()) return existingByName.get();
+        // -----------------------------------------------------
 
         Pokemon pokemon = new Pokemon();
+        pokemon.setId(Long.valueOf(id));
         pokemon.setName(name);
         pokemon.setHeight((int) response.get("height"));
         pokemon.setWeight((int) response.get("weight"));
 
-        Integer id = (Integer) response.get("id");
         pokemon.setSprite("https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/" + id + ".png");
 
         pokemon.setType(parseNameList((List<Map<String, Object>>) response.get("types"), "type"));
@@ -78,27 +85,35 @@ public class PokemonService {
         pokemon.setMove(parseNameList((List<Map<String, Object>>) response.get("moves"), "move"));
         pokemon.setStats(parseStats((List<Map<String, Object>>) response.get("stats")));
 
-        // Informações de espécie
+        // Species info
         Map<String, Object> speciesInfo = (Map<String, Object>) response.get("species");
-        String speciesUrl = Optional.ofNullable(speciesInfo).map(s -> (String) s.get("url")).orElse(null);
+        String speciesUrl = speciesInfo != null ? (String) speciesInfo.get("url") : null;
 
         if (speciesUrl != null) {
             Map<String, Object> speciesData = fetchFromApi(speciesUrl);
+
             if (speciesData != null) {
                 Map<String, Object> generationInfo = (Map<String, Object>) speciesData.get("generation");
                 if (generationInfo != null) pokemon.setGeneration((String) generationInfo.get("name"));
 
                 pokemon.setEvolution(parseEvolution(speciesData));
                 pokemon.setDescription(parseFlavorText(speciesData));
-            } else handleSpeciesFallback(pokemon);
-        } else handleSpeciesFallback(pokemon);
+            } else {
+                handleSpeciesFallback(pokemon);
+            }
+
+        } else {
+            handleSpeciesFallback(pokemon);
+        }
 
         return repository.save(pokemon);
     }
 
     public void fetchAndSaveAllPokemons() {
-        String url = baseApiUrl + "pokemon?limit=100000&offset=0";
+        int maxPokemon = 1025;
+        String url = baseApiUrl + "pokemon?limit=" + maxPokemon + "&offset=0";
         Map<String, Object> response = fetchFromApi(url);
+
         if (response == null || !response.containsKey("results")) return;
 
         List<Map<String, String>> results = (List<Map<String, String>>) response.get("results");
@@ -127,7 +142,7 @@ public class PokemonService {
         System.out.println("\n=== IMPORTAÇÃO CONCLUÍDA ===\n");
     }
 
-    // ===================== CONVERSÃO DE SPRITES =====================
+    // ===================== SPRITE BASE64 =====================
     public void convertAllSpritesToBase64() {
         List<Pokemon> pokemons = repository.findAll();
         int total = pokemons.size();
@@ -143,7 +158,6 @@ public class PokemonService {
                 if (pokemon.getSpriteBase64() == null || pokemon.getSpriteBase64().isEmpty()) {
                     String base64 = downloadImageAsBase64(pokemon.getSprite());
                     pokemon.setSpriteBase64(base64);
-                    Thread.sleep(500); // Delay para evitar bloqueio
                 }
             } catch (Exception e) {
                 status = "ERRO";
@@ -178,7 +192,8 @@ public class PokemonService {
         List<String> names = new ArrayList<>();
         Optional.ofNullable(dataList).orElse(List.of()).forEach(item -> {
             Map<String, String> inner = (Map<String, String>) item.get(key);
-            if (inner != null && inner.get("name") != null) names.add(inner.get("name"));
+            if (inner != null && inner.get("name") != null)
+                names.add(inner.get("name").toLowerCase());
         });
         return names;
     }
@@ -215,9 +230,11 @@ public class PokemonService {
 
     private void extractEvolutionChain(Map<String, Object> node, List<String> evolutionList) {
         Map<String, String> species = (Map<String, String>) node.get("species");
-        if (species != null && species.get("name") != null) evolutionList.add(species.get("name"));
+        if (species != null && species.get("name") != null)
+            evolutionList.add(species.get("name").toLowerCase());
 
-        Optional.ofNullable((List<Map<String, Object>>) node.get("evolves_to")).orElse(List.of())
+        Optional.ofNullable((List<Map<String, Object>>) node.get("evolves_to"))
+                .orElse(List.of())
                 .forEach(next -> extractEvolutionChain(next, evolutionList));
     }
 
@@ -226,9 +243,11 @@ public class PokemonService {
         if (entries != null) {
             for (Map<String, Object> entry : entries) {
                 Map<String, String> lang = (Map<String, String>) entry.get("language");
-                if ("en".equals(Optional.ofNullable(lang).map(l -> l.get("name")).orElse(""))) {
+                if ("en".equalsIgnoreCase(Optional.ofNullable(lang).map(l -> l.get("name")).orElse(""))) {
                     String text = (String) entry.get("flavor_text");
-                    if (text != null && !text.isEmpty()) return text.replaceAll("[\\n\\f]", " ").trim();
+                    if (text != null && !text.isEmpty()) {
+                        return text.replaceAll("[\\n\\f]", " ").trim();
+                    }
                 }
             }
         }
@@ -268,7 +287,7 @@ public class PokemonService {
         List<Pokemon> result = getAllPokemons();
 
         if (name != null && !name.isEmpty())
-            result = result.stream().filter(p -> p.getName().toLowerCase().contains(name.toLowerCase())).collect(Collectors.toList());
+            result = result.stream().filter(p -> p.getName().contains(name.toLowerCase())).collect(Collectors.toList());
 
         if (types != null && !types.isEmpty())
             result = result.stream().filter(p -> types.stream().allMatch(t -> p.getType().contains(t.toLowerCase()))).collect(Collectors.toList());
@@ -280,7 +299,8 @@ public class PokemonService {
             result = result.stream().filter(p -> p.getMove().contains(move.toLowerCase())).collect(Collectors.toList());
 
         if (generation != null && !generation.isEmpty())
-            result = result.stream().filter(p -> p.getGeneration() != null && p.getGeneration().toLowerCase().contains(generation.toLowerCase())).collect(Collectors.toList());
+            result = result.stream().filter(p -> p.getGeneration() != null &&
+                    p.getGeneration().toLowerCase().contains(generation.toLowerCase())).collect(Collectors.toList());
 
         return result;
     }
