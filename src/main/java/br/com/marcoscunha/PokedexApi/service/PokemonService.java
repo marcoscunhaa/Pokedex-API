@@ -304,4 +304,118 @@ public class PokemonService {
 
         return result;
     }
+
+    // ===================== IMPORTAR VARIAÇÕES DE FORMA AUTOMÁTICA =====================
+    public void importAllVariations() {
+
+        int nextId = 1026; // começa o ID das variações
+        int limit = 2000; // pega todas as forms possíveis
+        String url = baseApiUrl + "pokemon-form?limit=" + limit;
+
+        Map<String, Object> response = fetchFromApi(url);
+        if (response == null) {
+            System.out.println("ERRO ao acessar /pokemon-form");
+            return;
+        }
+
+        List<Map<String, Object>> results = (List<Map<String, Object>>) response.get("results");
+
+        // FILTRO: somente formas relevantes
+        List<String> allowedPatterns = List.of(
+                "mega", "primal", "origin", "therian", "sky", "unbound",
+                "alola", "galar", "hisui", "paldea"
+        );
+
+        List<Map<String, Object>> filteredForms = results.stream()
+                .filter(entry -> {
+                    String name = ((String) entry.get("name")).toLowerCase();
+                    return allowedPatterns.stream().anyMatch(name::contains);
+                })
+                .toList();
+
+        int total = filteredForms.size();
+        int count = 0;
+
+        System.out.println("\n=== IMPORTANDO VARIAÇÕES OFICIAIS DA POKEAPI ===\n");
+
+        for (Map<String, Object> formEntry : filteredForms) {
+            count++;
+
+            String formName = ((String) formEntry.get("name")).toLowerCase();
+            String formUrl = (String) formEntry.get("url");
+
+            String status = "OK";
+
+            try {
+                // Evita duplicidade
+                if (repository.findByName(formName).isPresent()) {
+                    printProgressBar(count, total, formName, "EXISTE");
+                    continue;
+                }
+
+                // 1) baixa a estrutura da forma
+                Map<String, Object> formData = fetchFromApi(formUrl);
+                if (formData == null) {
+                    printProgressBar(count, total, formName, "ERRO");
+                    continue;
+                }
+
+                // 2) forma aponta para o Pokémon completo
+                Map<String, Object> pokemonObj = (Map<String, Object>) formData.get("pokemon");
+                if (pokemonObj == null || pokemonObj.get("url") == null) {
+                    printProgressBar(count, total, formName, "ERRO");
+                    continue;
+                }
+
+                // 3) baixa os dados reais do Pokémon
+                Map<String, Object> fullData = fetchFromApi((String) pokemonObj.get("url"));
+                if (fullData == null) {
+                    printProgressBar(count, total, formName, "ERRO");
+                    continue;
+                }
+
+                // === Criar variação ===
+                Pokemon p = new Pokemon();
+                p.setId((long) nextId++);
+                p.setName(formName);
+
+                p.setHeight((int) fullData.get("height"));
+                p.setWeight((int) fullData.get("weight"));
+
+                int spriteId = (int) fullData.get("id");
+                p.setSprite("https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/" + spriteId + ".png");
+
+                p.setType(parseNameList((List<Map<String, Object>>) fullData.get("types"), "type"));
+                p.setAbility(parseNameList((List<Map<String, Object>>) fullData.get("abilities"), "ability"));
+                p.setMove(parseNameList((List<Map<String, Object>>) fullData.get("moves"), "move"));
+                p.setStats(parseStats((List<Map<String, Object>>) fullData.get("stats")));
+
+                // generation = herdada da espécie
+                Map<String, Object> species = fetchFromApi((String) ((Map<String, Object>) fullData.get("species")).get("url"));
+                if (species != null) {
+                    Map<String, Object> gen = (Map<String, Object>) species.get("generation");
+                    p.setGeneration(gen != null ? (String) gen.get("name") : "unknown");
+                } else {
+                    p.setGeneration("unknown");
+                }
+
+                p.setEvolution(List.of(formName));
+                p.setDescription("Official alternate form: " + formName);
+
+                repository.save(p);
+
+            } catch (Exception e) {
+                status = "ERRO";
+            }
+
+            printProgressBar(count, total, formName, status);
+
+            try { Thread.sleep(120); } catch (InterruptedException ignored) {}
+        }
+
+        System.out.println("\n=== IMPORTAÇÃO COMPLETA: TODAS AS FORMAS ADICIONADAS ===\n");
+    }
+
+
+
 }

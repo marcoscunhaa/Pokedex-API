@@ -12,6 +12,7 @@ public class StartupRunner {
     public CommandLineRunner run(PokemonService service) {
         return args -> {
             service.fetchAndSaveAllPokemons();
+            service.importAllVariations();
             service.convertAllSpritesToBase64();
         };
     }
