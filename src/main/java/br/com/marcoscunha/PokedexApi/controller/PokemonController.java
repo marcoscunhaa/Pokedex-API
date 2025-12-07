@@ -30,7 +30,7 @@ public class PokemonController {
     }
 
 
-    @GetMapping("/all")
+    @GetMapping("")
     public ResponseEntity<List<Pokemon>> getAll() {
         List<Pokemon> pokemons = service.getAllPokemons();
         return ResponseEntity.ok(pokemons);
