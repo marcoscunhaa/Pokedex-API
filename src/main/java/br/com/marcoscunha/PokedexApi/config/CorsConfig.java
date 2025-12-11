@@ -16,9 +16,9 @@ public class CorsConfig {
                 registry.addMapping("/**")
                         .allowedOrigins(
                                 "http://localhost:4200",
-                                "https://pokedex-sigma-plum.vercel.app",
+                                "https://pokedex-sigma-mocha.vercel.app",
                                 "https://pokedex-git-main-marcos-projects-c01daa0e.vercel.app",
-                                "https://pokedex-5bxg2jx36-marcos-projects-c01daa0e.vercel.app",
+                                "https://pokedex-ew5bpqoy4-marcos-projects-c01daa0e.vercel.app",
                                 "https://pokedex-api.duckdns.org" // seu novo domínio
                         )
                         .allowedMethods("*")
