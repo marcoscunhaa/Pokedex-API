@@ -15,14 +15,15 @@ public class CorsConfig {
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**")
                         .allowedOrigins(
-                                "http://137.184.186.231:8080",
                                 "http://localhost:4200",
                                 "https://pokedex-sigma-plum.vercel.app",
                                 "https://pokedex-git-main-marcos-projects-c01daa0e.vercel.app",
-                                "https://pokedex-5bxg2jx36-marcos-projects-c01daa0e.vercel.app"
+                                "https://pokedex-5bxg2jx36-marcos-projects-c01daa0e.vercel.app",
+                                "https://pokedex-api.duckdns.org" // seu novo domínio
                         )
-                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                        .allowedHeaders("*");
+                        .allowedMethods("*")
+                        .allowedHeaders("*")
+                        .allowCredentials(true);
             }
         };
     }
