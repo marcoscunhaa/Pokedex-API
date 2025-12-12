@@ -259,10 +259,6 @@ public class PokemonService {
         return repository.findAllByOrderByIdAsc();
     }
 
-    public Page<Pokemon> getAllPaginated(Pageable pageable) {
-        return repository.findAll(pageable);
-    }
-
     public Pokemon findById(Long id) {
         return repository.findById(id).orElse(null);
     }

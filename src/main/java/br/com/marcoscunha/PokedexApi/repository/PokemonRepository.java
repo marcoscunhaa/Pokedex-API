@@ -21,11 +21,7 @@ public interface PokemonRepository extends JpaRepository<Pokemon, Long> {
 
     List<Pokemon> findByMoveContainingIgnoreCaseOrderByIdAsc(String move);
 
-    List<Pokemon> findByGenerationContainingIgnoreCaseOrderByIdAsc(String generation);
-
     Page<Pokemon> findAll(Pageable pageable);
-
-    Optional<Pokemon> findTopByOrderByIdDesc();
 
     Optional<Pokemon> findByName(String name);
 }
