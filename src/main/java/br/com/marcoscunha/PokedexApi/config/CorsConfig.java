@@ -16,9 +16,11 @@ public class CorsConfig {
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**")
                         .allowedOrigins(
-                                "http://localhost:4200",          // DEV
-                                "https://megapokedex.app",        // PROD
-                                "https://www.megapokedex.app"     // PROD
+                                "http://localhost:4200",                    // DEV
+                                "https://megapokedex.app",                  // PROD
+                                "https://www.megapokedex.app",              // PROD
+                                "https://pokedex-k3jlt3t89-marcos-projects-c01daa0e.vercel.app", // Vercel
+                                "https://pokedex-io-six.vercel.app"        // Vercel
                         )
                         .allowedMethods(
                                 "GET",

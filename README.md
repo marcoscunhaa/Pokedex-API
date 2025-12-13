@@ -1,92 +1,117 @@
+* * *
 
+🧠 Pokédex API - Java
+=====================
 
-# 🧠 Pokédex API - Java
+Uma **REST API** desenvolvida com **Spring Boot 3.5.0** e **Java 17**, que consome dados da PokéAPI e armazena localmente em **MySQL**. Permite buscar Pokémon por diversos critérios e possui um **modo de busca avançado** com filtros combinados.
 
-A REST API developed with **Spring Boot 3.5.0** and **Java 17**, which consumes data from the [PokéAPI](https://pokeapi.co/api/v2/) and stores it locally in a **MySQL** database. The system allows you to search for Pokémon by multiple criteria, in addition to including an advanced search mode with combined filters.
+O frontend Angular já foi buildado e colocado em `static` dentro do backend, permitindo acesso completo via navegador. A aplicação está hospedada em uma **máquina virtual no DigitalOcean**, com IP público configurado para acesso.
 
 * * *
 
-## 📑 Features
+📑 Features
+-----------
 
-* 🔎 Search for Pokémon by:
-  * ID
-  * Name
-  * Type
-  * Ability
-  * Move
-  * Region
-* 🧬 Advanced search:
-  * Combined filtering by multiple types, abilities, moves and regions.
-* 🧠 Automatic database filling when starting the project.
-* 🐳 Docker container configured with Dockerfile.
-* 🌐 **dev** and **prod** environment mode with `spring.profiles.active`.
-* ☁️ Hosting via **Railway** with MySQL database provisioned in the cloud.
-* 🔄 Automatic generation of tables by **Hibernate**.
+- 🔎 **Buscas por Pokémon por:**
+  
+  - ID
+  
+  - Nome
+  
+  - Tipo
+  
+  - Habilidade
+  
+  - Movimento
+  
+  - Região
+
+- 🧬 **Busca avançada:**
+  
+  - Combinação de filtros por múltiplos tipos, habilidades, movimentos e regiões.
+
+- 🧠 **Automação:**
+  
+  - Preenchimento automático da base de dados ao iniciar o projeto.
+
+- 🐳 **Docker:**
+  
+  - Containers configurados para backend e MySQL, incluindo frontend buildado.
+
+- 🔄 **Banco de dados:**
+  
+  - Criação automática de tabelas via Hibernate.
 
 * * *
 
-## 🛠️ Technologies Used
+🛠️ Tecnologias Utilizadas
+--------------------------
+
+* **Java 17**
+
+* **Spring Boot 3.5.0**
+
+* **Hibernate / JPA**
+
+* **Maven**
+
+* **MySQL**
+
+* **Docker / Docker Compose**
+
+* **Angular (frontend buildado em `dist` dentro de `static`)**
+
+* **DigitalOcean (VM e hospedagem)**
+
+* **IntelliJ IDEA 2025.1**
+
+* * *
+
+👨‍💻 Como Rodar Localmente ou na VPS
+-------------------------------------
+
+
+
+### ✅ Pré-requisitos
+
+* Docker e Docker Compose instalados
 
 * Java 17
 
-* Spring Boot 3.5.0
+* Maven (ou `./mvnw`)
 
-* Hibernate / JPA
 
-* Maven
 
-* MySQL
+### 🚀 Passo a passo
 
-* Docker / Docker Compose
+1. Clone o repositório:
+   
+   ```
+   git clone https://github.com/marcoscunhaa/Pokedex-with-springboot.git`
+   ```
 
-* Railway (deploy and database)
+2. Acesse a pasta do projeto:
+   
+   ```
+   cd Pokedex-with-springboot
+   ```
 
-* IntelliJ IDEA 2025.1
+3. Rode o build e baixe dependências:
+   
+   ```
+   mvn clean install
+   ```
 
----
+4. Suba os containers com Docker Compose:
+   
+   ```
+   docker-compose up -d
+   ```
 
-👨‍💻 How to Run in Development (Dev)
---------------------------------------------
+5. Acesse a aplicação pelo navegador:
+   
+   ```
+   http://http://137.184.186.231:8080/
+   ```
 
-Follow the steps below to run the project locally with a development profile:
 
-### ✅ Prerequisites
-
-* Docker and Docker Compose installed
-
-* Java 17 installed
-
-* Maven (or `./mvnw` if you prefer to use the wrapper)
-
-### 🚀 Step by Step
-
-**1. Clone the repository**
-
-```
-git clone https://github.com/marcoscunhaa/Pokedex-with-springboot.git
-```
-
-**2. Walk to the project**
-
-```
-cd Pokedex-with-springboot
-```
-
-**3. Go to src/main/resources/application.properties and change the line**
-
-```
-spring.profiles.active=dev
-```
-
-**4. Run `mvn clean install` to download dependencies and build the project.**
-
-**5. Import the project into your favorite IDE.**
-
-**6. Start the Spring Boot application.**
-
----
-
-🎯 Application running
--------------------
-
-![pokedex-app](assets/pokedex-application.gif "pokedex-app")
