@@ -11,13 +11,25 @@ public class CorsConfig {
     @Bean
     public WebMvcConfigurer corsConfigurer() {
         return new WebMvcConfigurer() {
+
             @Override
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**")
-                        .allowedOrigins("http://localhost:4200, https://pokedex-api.duckdns.org")
-                        .allowedMethods("*")
+                        .allowedOrigins(
+                                "http://localhost:4200",          // DEV
+                                "https://megapokedex.app",        // PROD
+                                "https://www.megapokedex.app"     // PROD
+                        )
+                        .allowedMethods(
+                                "GET",
+                                "POST",
+                                "PUT",
+                                "DELETE",
+                                "OPTIONS"
+                        )
                         .allowedHeaders("*")
-                        .allowCredentials(true);
+                        .allowCredentials(true)
+                        .maxAge(3600);
             }
         };
     }
